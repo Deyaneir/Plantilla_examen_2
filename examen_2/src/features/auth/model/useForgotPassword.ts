@@ -2,10 +2,13 @@ import { supabase } from "@/shared/api/supabase";
 import { useMutation } from "@tanstack/react-query";
 
 const getBaseUrl = () => {
+  // In browser: use window.location.origin (automatically matches current URL)
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     return window.location.origin;
   }
-  return "http://192.168.100.43:5174";
+
+  // Fallback (SSR or non-browser context)
+  return process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/$/, "") || "http://localhost:5173";
 };
 
 export const useForgotPassword = () => {
