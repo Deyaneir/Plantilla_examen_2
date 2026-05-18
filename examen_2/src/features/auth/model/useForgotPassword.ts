@@ -2,13 +2,24 @@ import { supabase } from "@/shared/api/supabase";
 import { useMutation } from "@tanstack/react-query";
 
 const getBaseUrl = () => {
-  // In browser: use window.location.origin (automatically matches current URL)
+  const configuredUrl =
+    process.env.EXPO_PUBLIC_WEB_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
+
+  if (configuredUrl) {
+    const normalizedUrl = configuredUrl.replace(/\/$/, "");
+    return normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://")
+      ? normalizedUrl
+      : `https://${normalizedUrl}`;
+  }
+
+  // In browser: use window.location.origin when no public URL is configured.
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     return window.location.origin;
   }
 
-  // Fallback (SSR or non-browser context)
-  return process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/$/, "") || "http://localhost:5173";
+  // Fallback for local dev or non-browser contexts without public URL config.
+  return "http://localhost:5173";
 };
 
 export const useForgotPassword = () => {

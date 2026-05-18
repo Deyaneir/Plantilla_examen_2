@@ -1,6 +1,20 @@
 import { useState } from "react";
 import { supabase } from "@/shared/api/supabase";
 
+const getPublicOrigin = () => {
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    return window.location.origin;
+  }
+
+  const configuredUrl = import.meta.env.VITE_PUBLIC_WEB_URL || import.meta.env.VITE_WEB_URL;
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  return "http://localhost:5173";
+};
+
 type Status = "idle" | "loading" | "success" | "error";
 
 export const useRegister = () => {
@@ -11,7 +25,7 @@ export const useRegister = () => {
     setStatus("loading");
     setError(null);
 
-    const redirectTo = `${window.location.origin}/confirm-email`;
+    const redirectTo = `${getPublicOrigin()}/confirm-email`;
 
     console.log("📝 Registrando usuario...");
     console.log("   Email:", email);

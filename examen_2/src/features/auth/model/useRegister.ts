@@ -1,6 +1,25 @@
 import { useState } from "react";
 import { supabase } from "@/shared/api/supabase";
 
+const getBaseUrl = () => {
+  const configuredUrl =
+    process.env.EXPO_PUBLIC_WEB_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
+
+  if (configuredUrl) {
+    const normalizedUrl = configuredUrl.replace(/\/$/, "");
+    return normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://")
+      ? normalizedUrl
+      : `https://${normalizedUrl}`;
+  }
+
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    return window.location.origin;
+  }
+
+  return "http://localhost:5173";
+};
+
 export const useRegister = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -10,13 +29,7 @@ export const useRegister = () => {
     setError(null);
 
     const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
-    
-    let redirectTo: string;
-    if (isWeb) {
-      redirectTo = `${window.location.origin}/confirm-email`;
-    } else {
-      redirectTo = `authesfot://confirm-email`;
-    }
+    const redirectTo = isWeb ? `${getBaseUrl()}/confirm-email` : `authesfot://confirm-email`;
 
     console.log("📝 Registrando usuario...");
     console.log("   Email:", email);
