@@ -43,13 +43,13 @@ export const RegisterPage = () => {
     return (
       <View style={styles.successContainer}>
         <Text style={styles.successIcon}>📬</Text>
-        <Text style={styles.successTitle}>¡Revisa tu email!</Text>
+        <Text style={styles.successTitle}>¡Registro exitoso!</Text>
         <Text style={styles.successText}>
           Te enviamos un link de confirmación a{" "}
           <Text style={{ fontWeight:"700" }}>{email}</Text>.{"  "}
           Confirma tu cuenta para poder iniciar sesión.
         </Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
           <Text style={styles.link}>← Volver al login</Text>
         </TouchableOpacity>
       </View>

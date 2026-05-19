@@ -58,6 +58,13 @@ export const ConfirmEmailPage = () => {
         <div style={{ fontSize:"48px", marginBottom:"16px" }}>❌</div>
         <h2 style={{ color:"#DC2626" }}>Link inválido</h2>
         <p style={{ color:"#64748B" }}>{error}</p>
+        <div style={{ marginTop: 18, textAlign: "left", background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+          <strong>Debug info (solo para diagnóstico):</strong>
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, marginTop: 8 }}>
+{JSON.stringify({ href: window.location.href, search: location.search, hash: location.hash, params: Object.fromEntries(new URLSearchParams(location.search)), hashParams: Object.fromEntries(new URLSearchParams(location.hash.replace(/^#/, '')))}, null, 2)}
+          </pre>
+          <p style={{ color: '#475569', fontSize: 12 }}>Copia la sección anterior y pégala aquí si quieres que lo inspeccione.</p>
+        </div>
       </div>
     );
     return (

@@ -1,18 +1,10 @@
 import { supabase } from "@/shared/api/supabase";
 import { useMutation } from "@tanstack/react-query";
 
+const WEB_APP_URL = "https://plantilla-examen-2.vercel.app";
+
 const getPublicOrigin = () => {
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    return window.location.origin;
-  }
-
-  const configuredUrl = import.meta.env.VITE_PUBLIC_WEB_URL || import.meta.env.VITE_WEB_URL;
-
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-
-  return "http://localhost:5173";
+  return WEB_APP_URL;
 };
 
 export const useForgotPassword = () => {

@@ -6,33 +6,32 @@ import { Button } from "@/shared/ui/Button";
 import { router } from "expo-router";
 import { StyleSheet, Text, View, ActivityIndicator } from "react-native";
 
-const parseConfirmationToken = (url: string): { accessToken: string | null; refreshToken: string | null; type: string | null } => {
-  if (!url) return { accessToken: null, refreshToken: null, type: null };
+const parseConfirmationToken = (url: string): {
+  accessToken: string | null;
+  refreshToken: string | null;
+  code: string | null;
+  token: string | null;
+  email: string | null;
+  type: string | null;
+} => {
+  if (!url) return { accessToken: null, refreshToken: null, code: null, token: null, email: null, type: null };
 
   try {
-    if (url.includes("#")) {
-      const hash = url.split("#")[1];
-      const params = new URLSearchParams(hash);
-      return {
-        accessToken: params.get("access_token"),
-        refreshToken: params.get("refresh_token"),
-        type: params.get("type"),
-      };
-    }
+    const hash = url.includes("#") ? url.split("#")[1] : "";
+    const search = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+    const hashParams = new URLSearchParams(hash);
+    const searchParams = new URLSearchParams(search);
 
-    if (url.includes("?")) {
-      const search = url.split("?")[1];
-      const params = new URLSearchParams(search);
-      return {
-        accessToken: params.get("access_token"),
-        refreshToken: params.get("refresh_token"),
-        type: params.get("type"),
-      };
-    }
-
-    return { accessToken: null, refreshToken: null, type: null };
+    return {
+      accessToken: hashParams.get("access_token") ?? searchParams.get("access_token"),
+      refreshToken: hashParams.get("refresh_token") ?? searchParams.get("refresh_token"),
+      code: searchParams.get("code") ?? hashParams.get("code"),
+      token: searchParams.get("token") ?? hashParams.get("token"),
+      email: searchParams.get("email") ?? hashParams.get("email"),
+      type: hashParams.get("type") ?? searchParams.get("type"),
+    };
   } catch {
-    return { accessToken: null, refreshToken: null, type: null };
+    return { accessToken: null, refreshToken: null, code: null, token: null, email: null, type: null };
   }
 };
 
@@ -41,19 +40,65 @@ export const ConfirmEmailPage = () => {
   const [message, setMessage] = useState("Verificando tu correo...");
 
   useEffect(() => {
+    let isMounted = true;
+
     const confirmEmail = async () => {
       try {
         const url = await Linking.getInitialURL();
         console.log("📧 Confirm email URL:", url);
 
-        if (!url) {
-          setStatus("error");
-          setMessage("URL no proporcionada.");
+        if (!isMounted) return;
+
+        const { accessToken, refreshToken, code, token, email, type } = parseConfirmationToken(url ?? "");
+        console.log(
+          "📧 Access Token:", accessToken ? "SÍ" : "NO",
+          "Code:", code ? "SÍ" : "NO",
+          "Token:", token ? "SÍ" : "NO",
+          "Type:", type,
+        );
+
+        if (code) {
+          console.log("🔄 Intercambiando code...");
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error) {
+            console.log("❌ Error exchangeCodeForSession:", error.message);
+            setStatus("error");
+            setMessage("El enlace de confirmación ha expirado.");
+            return;
+          }
+
+          if (!isMounted) return;
+          console.log("✅ Email confirmado con code!");
+          setStatus("success");
+          setMessage("¡Tu correo ha sido confirmado exitosamente!");
+          await supabase.auth.signOut();
           return;
         }
 
-        const { accessToken, refreshToken, type } = parseConfirmationToken(url);
-        console.log("📧 Access Token:", accessToken ? "SÍ" : "NO", "Type:", type);
+        if (token && email) {
+          console.log("🔄 Verificando token/email...");
+          const verificationType = type === "recovery" ? "recovery" : "email";
+          const { error } = await supabase.auth.verifyOtp({
+            token,
+            email,
+            type: verificationType,
+          });
+
+          if (error) {
+            console.log("❌ Error verifyOtp:", error.message);
+            setStatus("error");
+            setMessage("El enlace de confirmación ha expirado.");
+            return;
+          }
+
+          if (!isMounted) return;
+          console.log("✅ Email confirmado con token_hash!");
+          setStatus("success");
+          setMessage("¡Tu correo ha sido confirmado exitosamente!");
+          await supabase.auth.signOut();
+          return;
+        }
 
         if (accessToken && refreshToken && type === "signup") {
           console.log("🔄 Estableciendo sesión...");
@@ -70,12 +115,23 @@ export const ConfirmEmailPage = () => {
             console.log("✅ Email confirmado y sesión establecida!");
             setStatus("success");
             setMessage("¡Tu correo ha sido confirmado exitosamente!");
+            await supabase.auth.signOut();
           }
-        } else {
-          console.log("❌ No access_token/refresh_token found", { accessToken, refreshToken, type });
-          setStatus("error");
-          setMessage("Token no encontrado en el enlace.");
+          return;
         }
+
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          console.log("✅ Sesión existente detectada - email confirmado");
+          setStatus("success");
+          setMessage("¡Tu correo ha sido confirmado exitosamente!");
+          await supabase.auth.signOut();
+          return;
+        }
+
+        console.log("❌ No access_token/refresh_token/code/token found", { accessToken, refreshToken, code, token, email, type });
+        setStatus("error");
+        setMessage("Token no encontrado en el enlace.");
       } catch (err: any) {
         console.log("❌ Error:", err.message);
         setStatus("error");
@@ -84,7 +140,10 @@ export const ConfirmEmailPage = () => {
     };
 
     const timer = setTimeout(confirmEmail, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   return (
